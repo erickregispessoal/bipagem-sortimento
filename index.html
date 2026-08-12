@@ -658,15 +658,21 @@ async function handleScannedCode(ean){
 }
 
 async function lookupProduct(ean){
-  // Try Open Food Facts (no key required)
-  try{
-    const res = await fetch(`https://world.openfoodfacts.org/api/v0/product/${ean}.json`);
-    const data = await res.json();
-    if(data && data.status === 1 && data.product){
-      const name = data.product.product_name || data.product.product_name_pt || data.product.generic_name;
-      if(name) return name;
-    }
-  }catch(e){ /* network/API error, fall through to manual entry */ }
+  const sources = [
+    'https://world.openfoodfacts.org/api/v0/product/',
+    'https://world.openbeautyfacts.org/api/v0/product/',
+    'https://world.openproductsfacts.org/api/v0/product/'
+  ];
+  for(const base of sources){
+    try{
+      const res = await fetch(`${base}${ean}.json`);
+      const data = await res.json();
+      if(data && data.status === 1 && data.product){
+        const name = data.product.product_name || data.product.product_name_pt || data.product.generic_name;
+        if(name) return name;
+      }
+    }catch(e){ /* try next source */ }
+  }
   return null;
 }
 

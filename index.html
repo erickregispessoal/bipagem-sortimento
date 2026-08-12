@@ -298,6 +298,10 @@
   .modal .code{
     font-family:'IBM Plex Mono', monospace; color:var(--red); font-size:13px; margin-bottom:16px;
   }
+  .modal .debug-line{
+    font-family:'IBM Plex Mono', monospace; color:#9a9db0; font-size:10.5px;
+    margin:-10px 0 16px; line-height:1.5;
+  }
   .modal input, .modal input[type=text]{
     width:100%; padding:13px; border:1.5px solid var(--line);
     border-radius:4px; font-size:15px; font-family:'Barlow',sans-serif;
@@ -384,6 +388,7 @@
   <div class="modal">
     <h3>Produto não encontrado</h3>
     <p class="code" id="manualCode">EAN 000000000000</p>
+    <p class="debug-line" id="manualDebug"></p>
     <input type="text" id="manualNameInput" placeholder="Digite o nome do produto" autocomplete="off">
     <div class="actions">
       <button class="cancel" onclick="cancelManual()">Cancelar</button>
@@ -644,46 +649,59 @@ async function handleScannedCode(ean){
     return;
   }
   showToast('Buscando produto...');
-  const found = await lookupProduct(ean);
-  if(found){
-    addItem(ean, found, 'api');
-    showToast('✓ ' + found);
+  const result = await lookupProduct(ean);
+  if(result.name){
+    addItem(ean, result.name, 'api');
+    showToast('✓ ' + result.name);
   } else {
     pendingScanCode = ean;
     document.getElementById('manualCode').textContent = 'EAN ' + ean;
     document.getElementById('manualNameInput').value = '';
+    document.getElementById('manualDebug').textContent = result.debug.join(' · ');
     document.getElementById('manualModal').classList.add('active');
     setTimeout(()=>document.getElementById('manualNameInput').focus(), 150);
   }
 }
 
 async function lookupProduct(ean){
+  const debugLines = [];
+
   // 1) DotCompany - Brazilian catalog (supermarket, hygiene, cleaning etc), ~25 free/day per IP
   try{
     const res = await fetch(`https://dotcompany.com.br/api/catalogo/public/buscar?q=${ean}`);
-    const data = await res.json();
-    if(data && data.sucesso && data.produto && data.produto.nome){
-      return data.produto.nome;
+    if(res.ok){
+      const data = await res.json();
+      if(data && data.sucesso && data.produto && data.produto.nome){
+        return { name: data.produto.nome, debug: debugLines };
+      }
+      debugLines.push('DotCompany: sem resultado (' + (data.sucesso===false ? (data.erro||'não encontrado') : 'vazio') + ')');
+    } else {
+      debugLines.push(`DotCompany: HTTP ${res.status}`);
     }
-  }catch(e){ /* try next source */ }
+  }catch(e){ debugLines.push('DotCompany: bloqueado/erro de rede (' + e.message + ')'); }
 
   // 2) Open Food/Beauty/Products Facts - global community databases
   const sources = [
-    'https://world.openfoodfacts.org/api/v0/product/',
-    'https://world.openbeautyfacts.org/api/v0/product/',
-    'https://world.openproductsfacts.org/api/v0/product/'
+    ['OpenFoodFacts', 'https://world.openfoodfacts.org/api/v0/product/'],
+    ['OpenBeautyFacts', 'https://world.openbeautyfacts.org/api/v0/product/'],
+    ['OpenProductsFacts', 'https://world.openproductsfacts.org/api/v0/product/']
   ];
-  for(const base of sources){
+  for(const [label, base] of sources){
     try{
       const res = await fetch(`${base}${ean}.json`);
-      const data = await res.json();
-      if(data && data.status === 1 && data.product){
-        const name = data.product.product_name || data.product.product_name_pt || data.product.generic_name;
-        if(name) return name;
+      if(res.ok){
+        const data = await res.json();
+        if(data && data.status === 1 && data.product){
+          const name = data.product.product_name || data.product.product_name_pt || data.product.generic_name;
+          if(name) return { name, debug: debugLines };
+        }
+        debugLines.push(`${label}: sem resultado`);
+      } else {
+        debugLines.push(`${label}: HTTP ${res.status}`);
       }
-    }catch(e){ /* try next source */ }
+    }catch(e){ debugLines.push(`${label}: bloqueado/erro de rede`); }
   }
-  return null;
+  return { name: null, debug: debugLines };
 }
 
 function addItem(ean, name, source){

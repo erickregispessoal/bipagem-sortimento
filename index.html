@@ -658,6 +658,16 @@ async function handleScannedCode(ean){
 }
 
 async function lookupProduct(ean){
+  // 1) DotCompany - Brazilian catalog (supermarket, hygiene, cleaning etc), ~25 free/day per IP
+  try{
+    const res = await fetch(`https://dotcompany.com.br/api/catalogo/public/buscar?q=${ean}`);
+    const data = await res.json();
+    if(data && data.sucesso && data.produto && data.produto.nome){
+      return data.produto.nome;
+    }
+  }catch(e){ /* try next source */ }
+
+  // 2) Open Food/Beauty/Products Facts - global community databases
   const sources = [
     'https://world.openfoodfacts.org/api/v0/product/',
     'https://world.openbeautyfacts.org/api/v0/product/',

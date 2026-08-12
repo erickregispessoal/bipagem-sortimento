@@ -1,4 +1,4 @@
-const CACHE_NAME = 'bipagem-sortimento-v1';
+const CACHE_NAME = 'bipagem-sortimento-v2';
 const ASSETS = [
   './index.html',
   './manifest.json',
@@ -23,11 +23,17 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
-  // Network-first for the API lookups, cache-first for app shell files
   if (event.request.url.includes('openfoodfacts.org')) {
     return; // let it go straight to network
   }
+  // Network-first: always try to get the latest file; fall back to cache only if offline
   event.respondWith(
-    caches.match(event.request).then((cached) => cached || fetch(event.request))
+    fetch(event.request)
+      .then((res) => {
+        const resClone = res.clone();
+        caches.open(CACHE_NAME).then((cache) => cache.put(event.request, resClone));
+        return res;
+      })
+      .catch(() => caches.match(event.request))
   );
 });

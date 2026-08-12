@@ -1,0 +1,665 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Bipagem de Sortimento · Komprão Atacadista</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0C1E5B">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Bipagem">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="icon" href="icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Barlow:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
+<style>
+  :root{
+    --navy:#0C1E5B;
+    --navy-deep:#081340;
+    --red:#E1131E;
+    --yellow:#F5B800;
+    --paper:#F4F3EF;
+    --ink:#12162B;
+    --line: rgba(12,30,91,0.14);
+    --ok:#1E8E5A;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{margin:0; padding:0; height:100%;}
+  body{
+    background:var(--paper);
+    color:var(--ink);
+    font-family:'Barlow', sans-serif;
+    overflow-x:hidden;
+  }
+  ::selection{background:var(--yellow); color:var(--navy-deep);}
+
+  /* barcode stripe motif */
+  .stripes{
+    height:10px;
+    background: repeating-linear-gradient(90deg,
+      var(--navy) 0 2px, transparent 2px 5px,
+      var(--navy) 5px 6px, transparent 6px 9px,
+      var(--navy) 9px 12px, transparent 12px 18px);
+    opacity:0.9;
+  }
+
+  header.app{
+    background:var(--navy);
+    color:#fff;
+    padding:22px 20px 26px;
+    position:relative;
+  }
+  header.app .eyebrow{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:11px;
+    letter-spacing:0.14em;
+    text-transform:uppercase;
+    color:var(--yellow);
+    margin:0 0 6px;
+  }
+  header.app h1{
+    font-family:'Archivo Black', sans-serif;
+    font-size:26px;
+    line-height:1.05;
+    margin:0;
+    letter-spacing:-0.01em;
+  }
+  header.app .sub{
+    font-size:13.5px;
+    color:rgba(255,255,255,0.7);
+    margin-top:6px;
+  }
+
+  main{ padding:18px 16px 100px; max-width:560px; margin:0 auto; }
+
+  /* ---------- Views ---------- */
+  .view{ display:none; }
+  .view.active{ display:block; }
+
+  /* ---------- Task list (home) ---------- */
+  .new-task-btn{
+    width:100%;
+    background:var(--red);
+    color:#fff;
+    border:none;
+    border-radius:2px;
+    padding:16px;
+    font-family:'Barlow', sans-serif;
+    font-weight:700;
+    font-size:16px;
+    letter-spacing:0.01em;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:10px;
+    margin:16px 0 22px;
+    cursor:pointer;
+    box-shadow:0 3px 0 rgba(0,0,0,0.15);
+  }
+  .new-task-btn:active{ transform:translateY(2px); box-shadow:none; }
+
+  .section-label{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:11px;
+    letter-spacing:0.12em;
+    text-transform:uppercase;
+    color:var(--navy);
+    opacity:0.6;
+    margin:0 0 10px 2px;
+  }
+
+  .task-card{
+    background:#fff;
+    border:1px solid var(--line);
+    border-left:5px solid var(--navy);
+    border-radius:2px;
+    padding:14px 14px 12px;
+    margin-bottom:10px;
+    cursor:pointer;
+    position:relative;
+  }
+  .task-card:active{ background:#efeee9; }
+  .task-card .row1{
+    display:flex; justify-content:space-between; align-items:baseline; gap:8px;
+  }
+  .task-card h3{
+    font-family:'Barlow', sans-serif;
+    font-weight:700;
+    font-size:17px;
+    margin:0;
+  }
+  .task-card .count{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:13px;
+    color:var(--navy);
+    white-space:nowrap;
+  }
+  .task-card .meta{
+    font-size:12.5px;
+    color:#6b6f80;
+    margin-top:4px;
+    font-family:'IBM Plex Mono', monospace;
+  }
+  .task-card .del{
+    position:absolute; top:10px; right:10px;
+    width:26px; height:26px;
+    display:flex; align-items:center; justify-content:center;
+    color:#b5b8c4;
+    font-size:16px;
+    background:none; border:none; cursor:pointer;
+  }
+
+  .empty{
+    text-align:center;
+    padding:50px 20px;
+    color:#8a8d9c;
+  }
+  .empty .glyph{ font-size:34px; margin-bottom:10px; opacity:0.6; }
+  .empty p{ font-size:14px; line-height:1.5; margin:0; }
+
+  /* ---------- Task detail ---------- */
+  .backbar{
+    display:flex; align-items:center; gap:10px;
+    margin-bottom:4px;
+  }
+  .backbtn{
+    background:none; border:none; color:var(--navy);
+    font-size:14px; font-weight:600; cursor:pointer;
+    display:flex; align-items:center; gap:6px; padding:6px 0;
+  }
+
+  .task-title-row{
+    display:flex; justify-content:space-between; align-items:flex-end;
+    margin:6px 0 4px;
+  }
+  .task-title-row h2{
+    font-family:'Archivo Black', sans-serif;
+    font-size:22px; margin:0; color:var(--navy-deep);
+  }
+  .task-title-row .n{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:14px; color:var(--red); font-weight:600;
+  }
+
+  .scan-btn{
+    width:100%;
+    background:var(--navy);
+    color:#fff;
+    border:none; border-radius:2px;
+    padding:16px;
+    font-weight:700; font-size:15.5px;
+    display:flex; align-items:center; justify-content:center; gap:10px;
+    cursor:pointer;
+    margin:14px 0 18px;
+    box-shadow:0 3px 0 rgba(0,0,0,0.2);
+  }
+  .scan-btn:active{ transform:translateY(2px); box-shadow:none; }
+
+  .item-row{
+    display:flex; justify-content:space-between; align-items:center;
+    gap:10px;
+    background:#fff;
+    border:1px solid var(--line);
+    border-radius:2px;
+    padding:11px 12px;
+    margin-bottom:8px;
+  }
+  .item-row .info{ min-width:0; }
+  .item-row .pname{
+    font-size:14.5px; font-weight:600;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  }
+  .item-row .pmeta{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:11.5px; color:#7a7e8c; margin-top:2px;
+    display:flex; align-items:center; gap:6px;
+  }
+  .tag{
+    font-size:9.5px; font-family:'IBM Plex Mono', monospace;
+    letter-spacing:0.06em; text-transform:uppercase;
+    padding:1px 6px; border-radius:20px;
+  }
+  .tag.api{ background:rgba(30,142,90,0.12); color:var(--ok); }
+  .tag.manual{ background:rgba(245,184,0,0.18); color:#8a6400; }
+  .item-row .rm{
+    background:none; border:none; color:#c7c9d3; font-size:16px; cursor:pointer; flex-shrink:0;
+  }
+
+  .export-btn{
+    width:100%;
+    background:#fff;
+    color:var(--navy);
+    border:1.5px solid var(--navy);
+    border-radius:2px;
+    padding:13px;
+    font-weight:700; font-size:14.5px;
+    cursor:pointer;
+    margin-top:6px;
+  }
+
+  /* ---------- Scanner overlay ---------- */
+  .scanner-overlay{
+    position:fixed; inset:0; background:#000; z-index:100;
+    display:none; flex-direction:column;
+  }
+  .scanner-overlay.active{ display:flex; }
+  .scan-top{
+    display:flex; justify-content:space-between; align-items:center;
+    padding:16px 18px; color:#fff;
+  }
+  .scan-top .taskname{
+    font-family:'IBM Plex Mono', monospace; font-size:12px; color:var(--yellow);
+    letter-spacing:0.08em; text-transform:uppercase;
+  }
+  .closebtn{
+    background:rgba(255,255,255,0.12); border:none; color:#fff;
+    width:34px; height:34px; border-radius:50%;
+    font-size:18px; cursor:pointer;
+  }
+  #reader{ flex:1; }
+  #reader video{ object-fit:cover; width:100%!important; height:100%!important; }
+  .scan-hint{
+    text-align:center; color:rgba(255,255,255,0.75);
+    font-size:13px; padding:14px 20px 24px;
+    font-family:'IBM Plex Mono', monospace;
+  }
+  .last-scan-toast{
+    position:absolute; left:16px; right:16px; bottom:90px;
+    background:var(--ok); color:#fff;
+    padding:12px 14px; border-radius:4px;
+    font-size:14px; font-weight:600;
+    display:none;
+    animation:pop 0.25s ease;
+  }
+  @keyframes pop{ from{transform:scale(0.9); opacity:0;} to{transform:scale(1); opacity:1;} }
+
+  /* ---------- Manual entry modal ---------- */
+  .modal-bg{
+    position:fixed; inset:0; background:rgba(8,19,64,0.55);
+    z-index:200; display:none; align-items:flex-end; justify-content:center;
+  }
+  .modal-bg.active{ display:flex; }
+  .modal{
+    background:#fff; width:100%; max-width:560px;
+    border-radius:10px 10px 0 0;
+    padding:22px 20px 26px;
+  }
+  .modal h3{ margin:0 0 4px; font-family:'Barlow',sans-serif; font-size:18px; }
+  .modal .code{
+    font-family:'IBM Plex Mono', monospace; color:var(--red); font-size:13px; margin-bottom:16px;
+  }
+  .modal input, .modal input[type=text]{
+    width:100%; padding:13px; border:1.5px solid var(--line);
+    border-radius:4px; font-size:15px; font-family:'Barlow',sans-serif;
+    margin-bottom:14px;
+  }
+  .modal input:focus{ outline:none; border-color:var(--navy); }
+  .modal .actions{ display:flex; gap:10px; }
+  .modal .actions button{
+    flex:1; padding:13px; border-radius:4px; border:none;
+    font-weight:700; font-size:14.5px; cursor:pointer;
+  }
+  .modal .cancel{ background:var(--paper); color:var(--ink); }
+  .modal .save{ background:var(--red); color:#fff; }
+
+  /* new task modal */
+  #newTaskModal .modal input{ margin-bottom:8px; }
+  .hint-line{ font-size:12px; color:#8a8d9c; margin-bottom:16px; }
+</style>
+</head>
+<body>
+
+<header class="app">
+  <p class="eyebrow">Komprão Atacadista · Loja 38</p>
+  <h1>Bipagem de&nbsp;Sortimento</h1>
+  <p class="sub">Crie uma tarefa por setor e bipe os itens antes da auditoria.</p>
+</header>
+<div class="stripes"></div>
+
+<main>
+
+  <!-- VIEW: Task list -->
+  <section id="view-list" class="view active">
+    <button class="new-task-btn" onclick="openNewTaskModal()">+ Nova tarefa</button>
+    <p class="section-label">Tarefas</p>
+    <div id="taskListWrap"></div>
+  </section>
+
+  <!-- VIEW: Task detail -->
+  <section id="view-detail" class="view">
+    <div class="backbar">
+      <button class="backbtn" onclick="goHome()">‹ Tarefas</button>
+    </div>
+    <div class="task-title-row">
+      <h2 id="detailTaskName">—</h2>
+      <span class="n" id="detailTaskCount">0 itens</span>
+    </div>
+    <button class="scan-btn" onclick="openScanner()">📷 Bipar produto</button>
+    <div id="itemListWrap"></div>
+    <button class="export-btn" onclick="exportCSV()">Exportar CSV</button>
+  </section>
+
+</main>
+
+<!-- Scanner overlay -->
+<div class="scanner-overlay" id="scannerOverlay">
+  <div class="scan-top">
+    <span class="taskname" id="scanTaskName">TAREFA</span>
+    <button class="closebtn" onclick="closeScanner()">✕</button>
+  </div>
+  <div id="reader"></div>
+  <div class="last-scan-toast" id="lastScanToast"></div>
+  <p class="scan-hint">Aponte a câmera para o código de barras (EAN‑13)</p>
+</div>
+
+<!-- Manual entry modal -->
+<div class="modal-bg" id="manualModal">
+  <div class="modal">
+    <h3>Produto não encontrado</h3>
+    <p class="code" id="manualCode">EAN 000000000000</p>
+    <input type="text" id="manualNameInput" placeholder="Digite o nome do produto" autocomplete="off">
+    <div class="actions">
+      <button class="cancel" onclick="cancelManual()">Cancelar</button>
+      <button class="save" onclick="saveManual()">Salvar item</button>
+    </div>
+  </div>
+</div>
+
+<!-- New task modal -->
+<div class="modal-bg" id="newTaskModal">
+  <div class="modal">
+    <h3>Nova tarefa</h3>
+    <p class="code">Ex: Bazar, Mercearia, Abastecimento</p>
+    <input type="text" id="newTaskInput" placeholder="Nome da tarefa" autocomplete="off">
+    <div class="actions">
+      <button class="cancel" onclick="closeNewTaskModal()">Cancelar</button>
+      <button class="save" onclick="createTask()">Criar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ===================== STATE ===================== */
+const STORAGE_KEY = 'bipagem_sortimento_tasks';
+let tasks = loadTasks();
+let currentTaskId = null;
+let pendingScanCode = null;
+let html5QrCode = null;
+let lastScannedCode = null;
+let lastScannedAt = 0;
+
+function loadTasks(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    return raw ? JSON.parse(raw) : [];
+  }catch(e){ return []; }
+}
+function saveTasks(){
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
+}
+
+/* ===================== NAV ===================== */
+function showView(id){
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+function goHome(){
+  currentTaskId = null;
+  renderTaskList();
+  showView('view-list');
+}
+function openTask(id){
+  currentTaskId = id;
+  renderTaskDetail();
+  showView('view-detail');
+}
+
+/* ===================== TASK LIST ===================== */
+function renderTaskList(){
+  const wrap = document.getElementById('taskListWrap');
+  if(tasks.length === 0){
+    wrap.innerHTML = `<div class="empty">
+      <div class="glyph">▍▍▌▍▎▌▍▎</div>
+      <p>Nenhuma tarefa criada ainda.<br>Toque em "Nova tarefa" para começar a bipar um setor.</p>
+    </div>`;
+    return;
+  }
+  const sorted = [...tasks].sort((a,b)=> b.createdAt - a.createdAt);
+  wrap.innerHTML = sorted.map(t => `
+    <div class="task-card" onclick="openTask('${t.id}')">
+      <button class="del" onclick="event.stopPropagation(); deleteTask('${t.id}')">✕</button>
+      <div class="row1">
+        <h3>${escapeHtml(t.name)}</h3>
+        <span class="count">${t.items.length} ${t.items.length===1?'item':'itens'}</span>
+      </div>
+      <div class="meta">criada em ${formatDate(t.createdAt)}</div>
+    </div>
+  `).join('');
+}
+
+function openNewTaskModal(){
+  document.getElementById('newTaskInput').value = '';
+  document.getElementById('newTaskModal').classList.add('active');
+  setTimeout(()=>document.getElementById('newTaskInput').focus(), 100);
+}
+function closeNewTaskModal(){
+  document.getElementById('newTaskModal').classList.remove('active');
+}
+function createTask(){
+  const name = document.getElementById('newTaskInput').value.trim();
+  if(!name) return;
+  const task = { id: 't_'+Date.now(), name, createdAt: Date.now(), items: [] };
+  tasks.push(task);
+  saveTasks();
+  closeNewTaskModal();
+  renderTaskList();
+  openTask(task.id);
+}
+function deleteTask(id){
+  if(!confirm('Excluir esta tarefa e todos os itens bipados nela?')) return;
+  tasks = tasks.filter(t=>t.id!==id);
+  saveTasks();
+  renderTaskList();
+}
+
+/* ===================== TASK DETAIL ===================== */
+function getCurrentTask(){
+  return tasks.find(t=>t.id===currentTaskId);
+}
+function renderTaskDetail(){
+  const t = getCurrentTask();
+  if(!t) return goHome();
+  document.getElementById('detailTaskName').textContent = t.name;
+  document.getElementById('detailTaskCount').textContent = `${t.items.length} ${t.items.length===1?'item':'itens'}`;
+  const wrap = document.getElementById('itemListWrap');
+  if(t.items.length===0){
+    wrap.innerHTML = `<div class="empty">
+      <div class="glyph">▍▍▌▍▎▌▍▎</div>
+      <p>Nenhum item bipado ainda nesta tarefa.</p>
+    </div>`;
+    return;
+  }
+  const sorted = [...t.items].sort((a,b)=> b.time - a.time);
+  wrap.innerHTML = sorted.map(it => `
+    <div class="item-row">
+      <div class="info">
+        <div class="pname">${escapeHtml(it.name)}</div>
+        <div class="pmeta">
+          <span>${it.ean}</span>
+          <span class="tag ${it.source}">${it.source==='api'?'API':'manual'}</span>
+        </div>
+      </div>
+      <button class="rm" onclick="removeItem('${it.id}')">✕</button>
+    </div>
+  `).join('');
+}
+function removeItem(itemId){
+  const t = getCurrentTask();
+  if(!t) return;
+  t.items = t.items.filter(i=>i.id!==itemId);
+  saveTasks();
+  renderTaskDetail();
+}
+
+/* ===================== EXPORT CSV ===================== */
+function exportCSV(){
+  const t = getCurrentTask();
+  if(!t || t.items.length===0){ alert('Nenhum item para exportar.'); return; }
+  let csv = 'Codigo EAN;Nome do Produto;Origem;Horario\n';
+  [...t.items].sort((a,b)=>a.time-b.time).forEach(it=>{
+    const hora = new Date(it.time).toLocaleString('pt-BR');
+    csv += `${it.ean};${it.name.replace(/;/g,',')};${it.source==='api'?'API':'Manual'};${hora}\n`;
+  });
+  const blob = new Blob(["\uFEFF"+csv], {type:'text/csv;charset=utf-8;'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `bipagem_${t.name.replace(/\s+/g,'_')}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+/* ===================== SCANNER ===================== */
+function openScanner(){
+  const t = getCurrentTask();
+  if(!t) return;
+  document.getElementById('scanTaskName').textContent = t.name;
+  document.getElementById('scannerOverlay').classList.add('active');
+  lastScannedCode = null;
+  lastScannedAt = 0;
+
+  html5QrCode = new Html5Qrcode("reader", { formatsToSupport: [ Html5QrcodeSupportedFormats.EAN_13 ], verbose:false });
+  const config = { fps: 12, qrbox: { width: 280, height: 140 }, aspectRatio: 1.6 };
+
+  html5QrCode.start(
+    { facingMode: "environment" },
+    config,
+    onScanSuccess,
+    ()=>{} // ignore per-frame scan failures
+  ).catch(err=>{
+    alert('Não foi possível acessar a câmera. Verifique as permissões do navegador.');
+    closeScanner();
+  });
+}
+
+function closeScanner(){
+  document.getElementById('scannerOverlay').classList.remove('active');
+  if(html5QrCode){
+    html5QrCode.stop().then(()=>html5QrCode.clear()).catch(()=>{});
+    html5QrCode = null;
+  }
+}
+
+function onScanSuccess(decodedText){
+  const now = Date.now();
+  if(decodedText === lastScannedCode && (now - lastScannedAt) < 3000) return; // debounce
+  lastScannedCode = decodedText;
+  lastScannedAt = now;
+  beep();
+  if(navigator.vibrate) navigator.vibrate(80);
+  handleScannedCode(decodedText);
+}
+
+function beep(){
+  try{
+    const ctx = new (window.AudioContext||window.webkitAudioContext)();
+    const o = ctx.createOscillator();
+    const g = ctx.createGain();
+    o.type = 'sine'; o.frequency.value = 880;
+    g.gain.setValueAtTime(0.15, ctx.currentTime);
+    o.connect(g); g.connect(ctx.destination);
+    o.start(); o.stop(ctx.currentTime + 0.12);
+  }catch(e){}
+}
+
+function showToast(msg){
+  const el = document.getElementById('lastScanToast');
+  el.textContent = msg;
+  el.style.display = 'block';
+  clearTimeout(el._t);
+  el._t = setTimeout(()=>{ el.style.display='none'; }, 1800);
+}
+
+async function handleScannedCode(ean){
+  // check for duplicate within the task
+  const t = getCurrentTask();
+  if(t && t.items.some(i=>i.ean===ean)){
+    showToast('Já bipado nesta tarefa');
+    return;
+  }
+  showToast('Buscando produto...');
+  const found = await lookupProduct(ean);
+  if(found){
+    addItem(ean, found, 'api');
+    showToast('✓ ' + found);
+  } else {
+    pendingScanCode = ean;
+    document.getElementById('manualCode').textContent = 'EAN ' + ean;
+    document.getElementById('manualNameInput').value = '';
+    document.getElementById('manualModal').classList.add('active');
+    setTimeout(()=>document.getElementById('manualNameInput').focus(), 150);
+  }
+}
+
+async function lookupProduct(ean){
+  // Try Open Food Facts (no key required)
+  try{
+    const res = await fetch(`https://world.openfoodfacts.org/api/v0/product/${ean}.json`);
+    const data = await res.json();
+    if(data && data.status === 1 && data.product){
+      const name = data.product.product_name || data.product.product_name_pt || data.product.generic_name;
+      if(name) return name;
+    }
+  }catch(e){ /* network/API error, fall through to manual entry */ }
+  return null;
+}
+
+function addItem(ean, name, source){
+  const t = getCurrentTask();
+  if(!t) return;
+  t.items.push({ id: 'i_'+Date.now()+'_'+Math.random().toString(36).slice(2,6), ean, name, source, time: Date.now() });
+  saveTasks();
+  renderTaskDetail();
+}
+
+function cancelManual(){
+  document.getElementById('manualModal').classList.remove('active');
+  pendingScanCode = null;
+}
+function saveManual(){
+  const name = document.getElementById('manualNameInput').value.trim();
+  if(!name || !pendingScanCode) return;
+  addItem(pendingScanCode, name, 'manual');
+  document.getElementById('manualModal').classList.remove('active');
+  showToast('✓ ' + name);
+  pendingScanCode = null;
+}
+
+/* ===================== UTIL ===================== */
+function escapeHtml(str){
+  const d = document.createElement('div');
+  d.textContent = str;
+  return d.innerHTML;
+}
+function formatDate(ts){
+  return new Date(ts).toLocaleDateString('pt-BR', { day:'2-digit', month:'2-digit', year:'numeric' });
+}
+
+/* ===================== INIT ===================== */
+renderTaskList();
+
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').catch(()=>{});
+  });
+}
+</script>
+
+</body>
+</html>

@@ -264,9 +264,15 @@
   #reader video{ object-fit:cover; width:100%!important; height:100%!important; }
   .scan-hint{
     text-align:center; color:rgba(255,255,255,0.75);
-    font-size:13px; padding:14px 20px 24px;
+    font-size:13px; padding:14px 20px 10px;
     font-family:'IBM Plex Mono', monospace;
   }
+  .manual-entry-link{
+    display:block; margin:16px auto 0; background:none; border:none;
+    color:var(--yellow); font-family:'Barlow',sans-serif; font-weight:600;
+    font-size:14px; text-decoration:underline; cursor:pointer; padding:6px;
+  }
+  #torchBtn.on{ background:var(--yellow); color:var(--navy-deep); }
   .last-scan-toast{
     position:absolute; left:16px; right:16px; bottom:90px;
     background:var(--ok); color:#fff;
@@ -349,11 +355,28 @@
 <div class="scanner-overlay" id="scannerOverlay">
   <div class="scan-top">
     <span class="taskname" id="scanTaskName">TAREFA</span>
-    <button class="closebtn" onclick="closeScanner()">✕</button>
+    <div style="display:flex; gap:8px;">
+      <button class="closebtn" id="torchBtn" onclick="toggleTorch()" style="display:none;">🔦</button>
+      <button class="closebtn" onclick="closeScanner()">✕</button>
+    </div>
   </div>
   <div id="reader"></div>
   <div class="last-scan-toast" id="lastScanToast"></div>
+  <button class="manual-entry-link" onclick="openManualEntryFromScanner()">Não está lendo? Digitar código</button>
   <p class="scan-hint">Aponte a câmera para o código de barras (EAN‑13)</p>
+</div>
+
+<!-- Manual EAN code entry modal (from scanner) -->
+<div class="modal-bg" id="manualCodeModal">
+  <div class="modal">
+    <h3>Digitar código</h3>
+    <p class="code">Digite o código EAN-13 do produto</p>
+    <input type="tel" id="manualCodeInput" placeholder="Ex: 7891000100103" autocomplete="off" inputmode="numeric">
+    <div class="actions">
+      <button class="cancel" onclick="closeManualEntryModal()">Cancelar</button>
+      <button class="save" onclick="submitManualEntryCode()">Buscar</button>
+    </div>
+  </div>
 </div>
 
 <!-- Manual entry modal -->
@@ -542,11 +565,37 @@ function openScanner(){
     config,
     onScanSuccess,
     ()=>{} // ignore per-frame scan failures
-  ).catch(err=>{
+  ).then(()=>{
+    checkTorchSupport();
+  }).catch(err=>{
     alert('Não foi possível acessar a câmera. Verifique as permissões do navegador.');
     closeScanner();
   });
 }
+
+let torchOn = false;
+function checkTorchSupport(){
+  torchOn = false;
+  const btn = document.getElementById('torchBtn');
+  btn.classList.remove('on');
+  btn.style.display = 'none';
+  try{
+    const caps = html5QrCode.getRunningTrackCapabilities();
+    if(caps && caps.torch){
+      btn.style.display = 'flex';
+    }
+  }catch(e){}
+}
+async function toggleTorch(){
+  if(!html5QrCode) return;
+  try{
+    torchOn = !torchOn;
+    await html5QrCode.applyVideoConstraints({ advanced: [{ torch: torchOn }] });
+    document.getElementById('torchBtn').classList.toggle('on', torchOn);
+  }catch(e){
+    showToast('Lanterna não disponível neste aparelho');
+    torchOn = false;
+  }
 
 function closeScanner(){
   document.getElementById('scannerOverlay').classList.remove('active');
@@ -626,6 +675,21 @@ function addItem(ean, name, source){
   t.items.push({ id: 'i_'+Date.now()+'_'+Math.random().toString(36).slice(2,6), ean, name, source, time: Date.now() });
   saveTasks();
   renderTaskDetail();
+}
+
+function openManualEntryFromScanner(){
+  document.getElementById('manualCodeInput').value = '';
+  document.getElementById('manualCodeModal').classList.add('active');
+  setTimeout(()=>document.getElementById('manualCodeInput').focus(), 100);
+}
+function closeManualEntryModal(){
+  document.getElementById('manualCodeModal').classList.remove('active');
+}
+function submitManualEntryCode(){
+  const code = document.getElementById('manualCodeInput').value.trim();
+  if(!code) return;
+  closeManualEntryModal();
+  handleScannedCode(code);
 }
 
 function cancelManual(){

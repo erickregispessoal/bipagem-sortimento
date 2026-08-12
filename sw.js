@@ -1,4 +1,4 @@
-const CACHE_NAME = 'bipagem-sortimento-v3';
+const CACHE_NAME = 'bipagem-sortimento-v4';
 const ASSETS = [
   './index.html',
   './manifest.json',
@@ -23,7 +23,7 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
-  if (event.request.url.includes('openfoodfacts.org') || event.request.url.includes('openbeautyfacts.org') || event.request.url.includes('openproductsfacts.org')) {
+  if (event.request.url.includes('openfoodfacts.org') || event.request.url.includes('openbeautyfacts.org') || event.request.url.includes('openproductsfacts.org') || event.request.url.includes('dotcompany.com.br')) {
     return; // let it go straight to network
   }
   // Network-first: always try to get the latest file; fall back to cache only if offline
